@@ -173,6 +173,28 @@ class ChatPipeline:
     def _memory_block(self, hits): return self.retrieval.memory_block(hits)
     def _rag_block(self, ctx): return self.retrieval.rag_block(ctx)
     def _augment_query_with_context(self, q, hits, ctx, route): return self.retrieval.augment_query_with_context(q, hits, ctx, route)
+
+    def _image_context(self, req: ChatRequest) -> str:
+        """Analyze any image attached to the request and return a text description."""
+        image = req.image_data
+        if image is None and req.image_path:
+            try:
+                from system.perception.image_analyzer import load_image
+                image = load_image(req.image_path)
+            except Exception:
+                pass
+        if image is None:
+            return ""
+        try:
+            from system.perception.image_analyzer import analyze_image
+            info = analyze_image(image)
+            caption = info.get("caption", "")
+            if not caption:
+                from system.perception.image_analyzer import _basic_image_description
+                caption = _basic_image_description(image)
+            return f"[Image: {caption}]"
+        except Exception:
+            return ""
     def _route_guidance(self, route): return self.retrieval.route_guidance(route)
     def _rag_reply(self, q, ctx): return self.retrieval.rag_reply(q, ctx)
     def _has_rag_evidence(self, ctx): return self.retrieval.has_rag_evidence(ctx)
@@ -476,6 +498,10 @@ class ChatPipeline:
         if self.config.enable_llm and self.llm_client.available():
             try:
                 llm_query = self._augment_query_with_context(req.user_text, memory_hits, rag_context, route)
+                # Inject image analysis into LLM query if image is attached
+                img_ctx = self._image_context(req)
+                if img_ctx:
+                    llm_query = f"{img_ctx}\n\nUser query: {llm_query}"
                 llm_text = self.llm_client.generate(llm_query, req.history)
             except Exception:
                 logger.debug("LLM call failed, falling through to next source", exc_info=True)

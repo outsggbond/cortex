@@ -19,6 +19,8 @@ class ChatTurn:
 class ChatRequest:
     user_text: str
     history: List[ChatTurn] = field(default_factory=list)
+    image_path: str = ""
+    image_data: Any = None  # numpy array (H, W, C), set programmatically
 
 
 @dataclass
