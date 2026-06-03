@@ -1,0 +1,210 @@
+{
+  "base_gain": 1.0,
+  "decay": 0.85,
+  "threshold": 0.08,
+  "tau": 0.04,
+  "gravity": 1.0,
+  "fluidity": 1.0,
+  "weight_decay": 0.02,
+  "logic_weight": 1.0,
+  "emotion_weight": 0.9,
+  "cross_weight": 1.0,
+  "empathy": 0.7,
+  "pmi_beta": 0.2,
+  "max_delta_pairs": 5000,
+  "profile_max_tokens": 200,
+  "delta_path": "artifacts/memory/synapse_delta.json",
+  "profile_path": "artifacts/memory/user_profile.json",
+  "max_iters": 6,
+  "epsilon": 0.001,
+  "top_k": 8,
+  "max_vocab": 20000,
+  "max_tokens_per_doc": 64,
+  "max_neighbors": 48,
+  "pmi_min": 0.0,
+  "pmi_scale": 1.0,
+  "learning_rate": 0.05,
+  "critical_gain": 2.0,
+  "default_gain": 1.0,
+  "critical_keywords": [
+    "critical",
+    "risk",
+    "danger",
+    "urgent",
+    "high",
+    "\u5371\u9669",
+    "\u98ce\u9669",
+    "\u7d27\u6025",
+    "\u9ad8\u5371"
+  ],
+  "special_nodes": [
+    "UNK",
+    "CONFIRM",
+    "REJECT",
+    "ALARM"
+  ],
+  "logic_nodes": [
+    "read",
+    "write",
+    "chmod",
+    "mkdir",
+    "move",
+    "delete",
+    "error",
+    "permission",
+    "conflict",
+    "success",
+    "file",
+    "directory",
+    "path",
+    "risk",
+    "test",
+    "run",
+    "execute"
+  ],
+  "emotion_nodes": [
+    "confident",
+    "cautious",
+    "apologetic",
+    "alert",
+    "urgent",
+    "calm",
+    "neutral",
+    "focused"
+  ],
+  "cross_synapses": [
+    {
+      "src": "error",
+      "dst": "alert",
+      "weight": 1.2
+    },
+    {
+      "src": "risk",
+      "dst": "cautious",
+      "weight": 0.9
+    },
+    {
+      "src": "permission",
+      "dst": "alert",
+      "weight": 0.8
+    },
+    {
+      "src": "conflict",
+      "dst": "cautious",
+      "weight": 0.9
+    },
+    {
+      "src": "success",
+      "dst": "confident",
+      "weight": 1.0
+    }
+  ],
+  "emotion_lexicon": {
+    "cautious": [
+      "\u8c28\u614e",
+      "\u5c0f\u5fc3",
+      "\u4fdd\u5b88",
+      "\u8c28\u614e\u7684"
+    ],
+    "alert": [
+      "\u8b66\u89c9",
+      "\u8b66\u544a",
+      "\u5371\u9669",
+      "\u98ce\u9669"
+    ],
+    "confident": [
+      "\u786e\u5b9a",
+      "\u80af\u5b9a",
+      "\u660e\u786e"
+    ],
+    "apologetic": [
+      "\u62b1\u6b49",
+      "\u4e0d\u597d\u610f\u601d"
+    ],
+    "calm": [
+      "\u51b7\u9759",
+      "\u5e73\u7a33"
+    ],
+    "focused": [
+      "\u4e13\u6ce8",
+      "\u76ee\u6807",
+      "\u6267\u884c"
+    ],
+    "neutral": [
+      "\u4e2d\u6027",
+      "\u666e\u901a"
+    ],
+    "professional": [
+      "api",
+      "model",
+      "planner",
+      "executor",
+      "latency",
+      "embedding",
+      "vector",
+      "matrix",
+      "pmi",
+      "search",
+      "policy",
+      "config",
+      "cache",
+      "trace",
+      "audit"
+    ],
+    "casual": [
+      "\u54c8\u54c8",
+      "\u53ef\u4ee5",
+      "\u968f\u4fbf",
+      "\u8bd5\u8bd5",
+      "\u804a\u804a",
+      "\u8f7b\u677e",
+      "\u968f\u610f",
+      "\u7b80\u5355"
+    ]
+  },
+  "min_edge_weight": 0.0001,
+  "path_depth": 3,
+  "intensity_low": 0.4,
+  "intensity_high": 0.7,
+  "default_policy": "steady",
+  "policies": {
+    "steady": {
+      "base_gain": 1.0,
+      "threshold": 0.12,
+      "tau": 0.06,
+      "decay": 0.82,
+      "fluidity": 0.9,
+      "gravity": 1.1,
+      "weight_decay": 0.03,
+      "emotion_weight": 0.8,
+      "empathy": 0.6
+    },
+    "radical": {
+      "base_gain": 1.4,
+      "threshold": 0.06,
+      "tau": 0.03,
+      "decay": 0.9,
+      "fluidity": 1.1,
+      "gravity": 0.9,
+      "weight_decay": 0.015,
+      "emotion_weight": 1.0,
+      "empathy": 0.8
+    },
+    "explorer": {
+      "base_gain": 1.2,
+      "threshold": 0.08,
+      "tau": 0.04,
+      "decay": 0.92,
+      "fluidity": 1.2,
+      "gravity": 0.85,
+      "weight_decay": 0.02,
+      "emotion_weight": 1.1,
+      "empathy": 0.9
+    }
+  },
+  "batch_size": 10,
+  "batch_interval": 5.0,
+  "queue_maxsize": 200,
+  "damping_eta": 0.1,
+  "damping_alert": 0.4
+}

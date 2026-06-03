@@ -1,0 +1,2 @@
+from oldpkg.util import answer
+def main(): return answer()

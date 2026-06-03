@@ -1,0 +1,42 @@
+# Reproducible install (pinned snapshot): pip install -r requirements.lock
+# Flexible install (minimum versions):   pip install -r requirements.txt
+
+# Core runtime
+numpy>=1.24
+psutil>=5.9
+pyyaml>=6.0
+scipy>=1.10
+
+# Vision / multimodal
+pillow>=10.0
+opencv-python>=4.8
+onnxruntime>=1.18
+
+# LLM / training stack
+torch>=2.2
+transformers>=4.41
+peft>=0.11
+accelerate>=0.30
+sentence-transformers>=3.0
+sentencepiece>=0.2.0
+tokenizers>=0.15
+safetensors>=0.4
+torch-geometric>=2.5
+
+# Dialogue / text processing
+jieba>=0.42.1
+pypinyin>=0.53
+ftfy>=6.2
+langdetect>=1.0.9
+
+# Federated / distributed runtime
+aiohttp>=3.9
+pyzmq>=25.1
+prefect>=2.14
+phe>=1.5.0
+
+# Graph / optimization / analysis
+deap>=1.4
+graphviz>=0.20
+neo4j>=5.20
+matplotlib>=3.8

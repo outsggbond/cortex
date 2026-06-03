@@ -1,0 +1,29 @@
+{
+  "action_overrides": {
+    "run_tests": { "success": 0.8, "cost": 1.2 },
+    "run_script": { "success": 0.85, "cost": 1.1 }
+  },
+  "error_to_action": {
+    "import_missing": {
+      "search_text": { "success": 1.15, "cost": 0.9 },
+      "read_file": { "success": 1.05, "cost": 0.9 },
+      "run_tests": { "success": 0.6, "cost": 1.3 }
+    },
+    "file_missing": {
+      "search_files": { "success": 1.15, "cost": 0.9 },
+      "touch_file": { "success": 1.1, "cost": 0.9 },
+      "run_script": { "success": 0.6, "cost": 1.3 }
+    },
+    "permission": {
+      "chmod": { "success": 1.15, "cost": 0.8 },
+      "write_file": { "success": 0.7, "cost": 1.2 }
+    },
+    "syntax": {
+      "search_text": { "success": 1.1, "cost": 0.9 },
+      "run_tests": { "success": 0.6, "cost": 1.3 }
+    },
+    "timeout": {
+      "run_tests": { "success": 0.7, "cost": 1.4 }
+    }
+  }
+}

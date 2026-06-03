@@ -1,0 +1,42 @@
+[
+  {
+    "name": "greeting",
+    "patterns": [
+      "\\b(hi|hello|hey)\\b",
+      "^(你好|您好|早上好|中午好|下午好|晚上好)[!！。?？]?$"
+    ],
+    "response": "你好，我是 Tina。有什么我可以帮你？"
+  },
+  {
+    "name": "identity",
+    "patterns": [
+      "你.*(名字|叫.*什么|是谁|怎么称呼)",
+      "(what'?s your name|who are you)"
+    ],
+    "response": "我是 Tina，一个学习型 AI 助手。"
+  },
+  {
+    "name": "capability",
+    "patterns": [
+      "你.*(会什么|能做什么|功能|擅长)",
+      "(what can you do|capabilities)"
+    ],
+    "response": "我是 Tina，可以陪你聊天，也能帮你写代码、排查报错、整理步骤。"
+  },
+  {
+    "name": "thanks",
+    "patterns": [
+      "(谢谢|感谢|辛苦了)",
+      "\\b(thanks|thank you|thx)\\b"
+    ],
+    "response": "不客气，我是 Tina。你可以继续说需求。"
+  },
+  {
+    "name": "hostile",
+    "patterns": [
+      "(傻逼|垃圾|废物)",
+      "\\b(stupid|idiot|trash)\\b"
+    ],
+    "response": "我是 Tina。你直接说问题，我给你可执行的步骤。"
+  }
+]

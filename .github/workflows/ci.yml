@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  PYTHONUTF8: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path requirements.lock) {
+            pip install -r requirements.lock
+          } else {
+            pip install -r requirements.txt
+          }
+          pip install pytest pytest-cov
+
+      - name: Data Leakage Gates (Smoke)
+        run: |
+          python scripts/clean_training_data.py `
+            --paths memory/adapter_train_smoke.jsonl memory/adapter_eval_smoke.jsonl `
+            --out-dir audit/ci_cleaned `
+            --report audit/ci_data_clean_report.json `
+            --check-cross-leakage `
+            --check-semantic-leakage `
+            --semantic-overlap-threshold 0.70 `
+            --semantic-max-items-per-file 400 `
+            --semantic-max-pair-comparisons 200000 `
+            --max-train-eval-pair-overlap-ratio 0.0 `
+            --max-train-eval-prompt-overlap-ratio 0.0 `
+            --max-train-eval-semantic-prompt-overlap-ratio 0.0 `
+            --max-train-eval-semantic-pair-overlap-ratio 0.50 `
+            --fail-on-gate
+
+      - name: Run Pytest
+        run: |
+          pytest

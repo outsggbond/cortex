@@ -1,0 +1,294 @@
+{
+  "enabled": true,
+  "weights": {
+    "cpu": 0.4,
+    "ram": 0.4,
+    "gpu": 0.2
+  },
+  "caps": {
+    "cpu_cores": 32,
+    "ram_gb": 64.0,
+    "vram_gb": 16.0
+  },
+  "pressure_weight": 0.5,
+  "level_thresholds": {
+    "high": 0.75,
+    "mid": 0.5
+  },
+  "feature_dim": {
+    "min": 96,
+    "max": 384,
+    "step": 32
+  },
+  "reasoning_k": {
+    "min": 4,
+    "max": 12
+  },
+  "chat_max_memories": {
+    "min": 3,
+    "max": 10
+  },
+  "similarity_threshold": {
+    "min": 0.72,
+    "max": 0.88
+  },
+  "checkpoint_interval": {
+    "min": 5,
+    "max": 20
+  },
+  "temporal_decay": {
+    "half_life_s": 1800
+  },
+  "index_compression": {
+    "enabled": true,
+    "after_s": 3600,
+    "dim": 64
+  },
+  "prefetch": {
+    "bytes": 16384
+  },
+  "throttle": {
+    "gpu_mem_ratio": 0.9,
+    "cooldown_s": 30,
+    "min_reasoning_k": 2,
+    "min_chat_max_memories": 2
+  },
+  "runtime_adaptive": {
+    "enabled": true,
+    "sample_interval_s": 12.0,
+    "apply_cooldown_s": 20.0,
+    "ema_alpha": 0.35,
+    "pressure_high": 0.82,
+    "pressure_low": 0.55,
+    "degrade_streak": 2,
+    "boost_streak": 3,
+    "degrade_step_reasoning_k": 2,
+    "degrade_step_chat_memories": 1,
+    "degrade_step_similarity_threshold": 0.01,
+    "boost_step_reasoning_k": 1,
+    "boost_step_chat_memories": 1,
+    "boost_step_similarity_threshold": 0.005,
+    "similarity_threshold_min": 0.65,
+    "similarity_threshold_max": 0.95,
+    "min_reasoning_k": 2,
+    "min_chat_max_memories": 2,
+    "heavy_route_min_score": 0.62,
+    "heavy_route_max_pressure": 0.70,
+    "transformer_hot_tune": true,
+    "planner_hot_tune": true,
+    "planner_depth_min": 2,
+    "planner_depth_max": 6,
+    "planner_beam_min": 2,
+    "planner_beam_max": 10,
+    "transformer_token_floor": 48,
+    "transformer_token_ceiling": 512,
+    "transformer_input_floor": 256,
+    "transformer_input_ceiling": 4096,
+    "heartbeat_enabled": true,
+    "heartbeat_interval_s": 6.0,
+    "bandit_enabled": true,
+    "bandit_arms": [0.85, 1.0, 1.15],
+    "bandit_explore": 0.75,
+    "bandit_auto_explore_enabled": true,
+    "bandit_explore_min": 0.2,
+    "bandit_explore_max": 1.6,
+    "bandit_explore_step_up": 0.03,
+    "bandit_explore_step_down": 0.02,
+    "bandit_explore_reward_low": -0.15,
+    "bandit_explore_reward_high": 0.25,
+    "bandit_explore_cooldown_s": 4.0,
+    "bandit_reward_ema_alpha": 0.2,
+    "bandit_contextual_bias_enabled": true,
+    "bandit_contextual_pressure_weight": 0.35,
+    "bandit_contextual_score_weight": 0.25,
+    "bandit_contextual_bias_cap": 0.2,
+    "bandit_contextual_cold_start_enabled": true,
+    "bandit_contextual_cold_start_gain": 0.4,
+    "bandit_hardware_guard_enabled": true,
+    "bandit_hardware_strict_signature": false,
+    "bandit_hardware_mismatch_count_decay": 0.45,
+    "bandit_hardware_mismatch_value_decay": 0.55,
+    "bandit_hardware_mismatch_explore_boost": 0.25,
+    "bandit_time_decay_enabled": true,
+    "bandit_time_decay_half_life_s": 1800.0,
+    "bandit_time_decay_min_factor": 0.15,
+    "bandit_time_decay_cooldown_s": 20.0,
+    "bandit_arm_cooldown_enabled": true,
+    "bandit_arm_cooldown_reward_threshold": -0.82,
+    "bandit_arm_cooldown_trigger_streak": 2,
+    "bandit_arm_cooldown_s": 45.0,
+    "bandit_all_cooled_safe_fallback_enabled": true,
+    "bandit_arm_risk_aware_enabled": true,
+    "bandit_arm_risk_alpha": 0.25,
+    "bandit_arm_risk_weight": 0.45,
+    "bandit_arm_risk_negative_weight": 0.35,
+    "bandit_arm_risk_cap": 0.5,
+    "bandit_safety_guard_enabled": true,
+    "bandit_safety_pressure_gate": 0.90,
+    "bandit_safety_score_gate": 0.30,
+    "bandit_safety_max_multiplier": 1.0,
+    "bandit_uncertainty_guard_enabled": true,
+    "bandit_uncertainty_var_gate": 0.32,
+    "bandit_uncertainty_min_samples": 6,
+    "bandit_uncertainty_pressure_gate": 0.62,
+    "bandit_uncertainty_score_gate": 0.42,
+    "bandit_uncertainty_max_multiplier": 1.0,
+    "bandit_regime_split_enabled": true,
+    "bandit_regime_pressure_gate": 0.78,
+    "bandit_regime_score_gate": 0.45,
+    "bandit_shock_guard_enabled": true,
+    "bandit_shock_reward_threshold": -0.9,
+    "bandit_shock_trigger_count": 2,
+    "bandit_shock_window_s": 25.0,
+    "bandit_shock_cooldown_s": 45.0,
+    "bandit_shock_max_multiplier": 1.0,
+    "bandit_spike_guard_enabled": true,
+    "bandit_spike_pressure_delta_threshold": 0.18,
+    "bandit_spike_score_drop_threshold": 0.22,
+    "bandit_spike_min_pressure": 0.55,
+    "bandit_spike_cooldown_s": 30.0,
+    "bandit_spike_max_multiplier": 1.0,
+    "bandit_drift_reset_enabled": true,
+    "bandit_drift_min_samples": 24,
+    "bandit_drift_reward_ema_floor": -0.22,
+    "bandit_drift_var_ema_floor": 0.30,
+    "bandit_drift_cooldown_s": 90.0,
+    "bandit_drift_count_decay": 0.5,
+    "bandit_drift_value_decay": 0.35,
+    "bandit_drift_explore_boost": 0.2,
+    "bandit_reward_decay": 0.0,
+    "state_path": "artifacts/audit/runtime_adapt_state.json",
+    "load_state": true,
+    "save_state_interval_s": 12.0,
+    "dynamic_interval_enabled": true,
+    "dynamic_interval_min_s": 2.0,
+    "dynamic_interval_max_s": 24.0,
+    "dynamic_interval_high_mul": 0.55,
+    "dynamic_interval_low_mul": 1.45,
+    "dynamic_interval_throttle_mul": 0.45,
+    "threshold_auto_enabled": true,
+    "threshold_auto_min_high": 0.68,
+    "threshold_auto_max_high": 0.92,
+    "threshold_auto_min_low": 0.35,
+    "threshold_auto_gap": 0.22,
+    "threshold_auto_step_up": 0.003,
+    "threshold_auto_step_down": 0.01,
+    "threshold_auto_cooldown_s": 4.0,
+    "health_emit_interval_s": 30.0,
+    "feedback_ema_alpha": 0.12,
+    "events_path": "artifacts/audit/runtime_adapt_events.jsonl",
+    "bandit_state_path": "artifacts/audit/runtime_adapt_bandit_state.json"
+  },
+  "perception_models": {
+    "image_tagger": "",
+    "audio_tagger": "",
+    "auto_extract": true,
+    "confidence_threshold": 0.75,
+    "top_k": 3
+  },
+  "semantic_refiner": {
+    "enabled": true,
+    "mode": "hybrid",
+    "min_co_count": 2.0,
+    "min_cluster_size": 3,
+    "max_cluster_size": 6,
+    "min_density": 0.3,
+    "min_avg_weight": 1.0,
+    "decay": 0.9,
+    "max_new_tokens": 3,
+    "cooldown_s": 120.0,
+    "min_resource_score": 0.6,
+    "abstract_prefix": "abs::",
+    "generation_interval": 20,
+    "retain_ratio": 0.4,
+    "kill_ratio": 0.2,
+    "mutate_ratio": 0.4,
+    "max_population": 50,
+    "merge_overlap": 0.6,
+    "decay_on_kill": 0.3,
+    "generalization_cap": 30,
+    "age_half_life_s": 3600.0,
+    "fitness_weights": {
+      "alpha": 1.0,
+      "beta": 0.8,
+      "gamma": 0.6,
+      "delta": 0.4,
+      "epsilon": 0.5
+    }
+  },
+  "abstraction_competition": {
+    "enabled": true,
+    "max_candidates": 4,
+    "max_combo": 2,
+    "max_sets": 6,
+    "min_score": 0.2
+  },
+  "cross_modal_aliases": {
+    "cat": [
+      "猫",
+      "喵",
+      "cat",
+      "meow"
+    ]
+  },
+  "transformer": {
+    "max_new_tokens": {
+      "min": 64,
+      "max": 256,
+      "step": 8
+    },
+    "max_input_tokens": {
+      "min": 384,
+      "max": 2048,
+      "step": 128
+    },
+    "temperature": {
+      "min": 0.2,
+      "max": 0.8
+    },
+    "top_p": {
+      "min": 0.85,
+      "max": 0.98
+    },
+    "top_k": {
+      "min": 20,
+      "max": 80
+    },
+    "repetition_penalty": {
+      "min": 1.02,
+      "max": 1.12
+    },
+    "internal_thought_tokens": {
+      "min": 0,
+      "max": 128,
+      "step": 8
+    },
+    "deliberate_min_score": 0.7,
+    "self_consistency": {
+      "enabled": true,
+      "min_score": 0.7,
+      "min_overlap_chars": 18
+    },
+    "deterministic": true
+  },
+  "gnn": {
+    "embed_dim": {
+      "min": 48,
+      "max": 128,
+      "step": 16
+    },
+    "context_size": {
+      "min": 6,
+      "max": 12
+    },
+    "top_k": {
+      "min": 4,
+      "max": 12
+    },
+    "temperature": {
+      "min": 0.1,
+      "max": 0.6
+    },
+    "deterministic": true
+  }
+}

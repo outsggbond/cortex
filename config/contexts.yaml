@@ -1,0 +1,37 @@
+prod_server:
+  policy: steady
+  policy_overrides:
+    fail_risk_penalty: 8.0
+  cost_overrides:
+    write_audit_cost: 1.5
+  planner_overrides:
+    distiller_enable: 0
+  nanobrain_overrides:
+    empathy: 0.15
+    threshold: 0.6
+    tau: 0.8
+    emotion_weight: 0.3
+    logic_weight: 1.2
+
+local_sandbox:
+  policy: radical
+  policy_overrides:
+    macro_weight: 1.2
+    prior_weight: 0.15
+  planner_overrides:
+    distiller_enable: 1
+  nanobrain_overrides:
+    empathy: 0.75
+    threshold: 0.2
+    tau: 0.3
+    emotion_weight: 1.1
+    logic_weight: 0.9
+
+training:
+  policy: default
+  nanobrain_overrides:
+    empathy: 0.6
+    threshold: 0.25
+    tau: 0.35
+    emotion_weight: 1.0
+    logic_weight: 1.0

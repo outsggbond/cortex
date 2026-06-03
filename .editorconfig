@@ -1,0 +1,18 @@
+root = true
+
+# 全局默认设置
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+# Python 专用配置
+[*.py]
+indent_style = space
+indent_size = 4
+
+# 数据与配置格式
+[*.{md,json,jsonl,yaml,yml,toml}]
+# 使用 2 空格缩进通常更符合 JSON/YAML 习惯
+indent_style = space
+indent_size = 2

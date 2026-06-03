@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "workflows": [
+    {
+      "id": "workspace_inventory",
+      "description": "Manual example workflow that inspects the repo and records the current file list.",
+      "enabled": true,
+      "trigger": {
+        "type": "manual"
+      },
+      "steps": [
+        {
+          "name": "mkdir",
+          "detail": "ensure automation output dir",
+          "path": "artifacts/audit/automation"
+        },
+        {
+          "name": "list_dir",
+          "detail": "list workspace root",
+          "path": "."
+        },
+        {
+          "name": "write_file",
+          "detail": "write automation heartbeat",
+          "path": "artifacts/audit/automation/workspace_inventory.txt",
+          "content": "workspace inventory workflow ran\n"
+        }
+      ]
+    },
+    {
+      "id": "project_health_report",
+      "description": "Manual demo workflow that generates a markdown/json report of automation readiness and recent activity.",
+      "enabled": true,
+      "trigger": {
+        "type": "manual"
+      },
+      "steps": [
+        {
+          "name": "mkdir",
+          "detail": "ensure automation report dir",
+          "path": "artifacts/audit/automation"
+        },
+        {
+          "name": "run_script",
+          "detail": "generate project automation health report",
+          "path": "scripts/automation_health_report.py",
+          "args": [
+            "--project-root",
+            ".",
+            "--markdown",
+            "artifacts/audit/automation/project_health_report.md",
+            "--json",
+            "artifacts/audit/automation/project_health_report.json",
+            "--focus-path",
+            "README.md",
+            "--focus-path",
+            "system/automation_runtime.py"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "readme_change_watch",
+      "description": "Regenerate a small health report when README.md changes.",
+      "enabled": true,
+      "trigger": {
+        "type": "path_changed",
+        "paths": [
+          "README.md"
+        ],
+        "run_on_start": true,
+        "cooldown_s": 3
+      },
+      "steps": [
+        {
+          "name": "run_script",
+          "detail": "generate README-focused health report",
+          "path": "scripts/automation_health_report.py",
+          "args": [
+            "--project-root",
+            ".",
+            "--markdown",
+            "artifacts/audit/automation/readme_watch_report.md",
+            "--json",
+            "artifacts/audit/automation/readme_watch_report.json",
+            "--focus-path",
+            "README.md",
+            "--recent-runs",
+            "3"
+          ]
+        }
+      ]
+    }
+  ]
+}

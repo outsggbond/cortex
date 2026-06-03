@@ -1,0 +1,22 @@
+{
+  "roots": [
+    "artifacts/audit",
+    "artifacts/checkpoints",
+    "artifacts/memory"
+  ],
+  "suffixes": [
+    ".json",
+    ".jsonl",
+    ".log",
+    ".pt",
+    ".npz",
+    ".bin",
+    ".safetensors",
+    ".pkl",
+    ".npy",
+    ".txt"
+  ],
+  "max_age_days": 30,
+  "max_total_gb": 8,
+  "keep_latest_per_dir": 40
+}

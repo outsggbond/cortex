@@ -1,0 +1,1 @@
+def ping(): return 'ok'

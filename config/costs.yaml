@@ -1,0 +1,6 @@
+default:
+  action_base:
+    move_file: 2.2
+    delete_file: 3.0
+  action_multiplier: {}
+  write_audit_cost: 0.0
