@@ -56,11 +56,22 @@ def _get_engine():
 
     # 3. Piper TTS (high quality, offline)
     try:
-        _engine_name = "piper"
-        logger.info("TTS: Piper TTS path configured")
-        return None  # Piper is handled differently
-    except Exception:
-        pass
+        piper_path = os.environ.get("PIPER_PATH", "piper")
+        model_path = os.environ.get("PIPER_MODEL", "")
+        if model_path:
+            # Verify piper binary is callable
+            import shutil
+            if shutil.which(piper_path) or os.path.isfile(piper_path):
+                _engine = piper_path  # store path for later use
+                _engine_name = "piper"
+                logger.info("TTS: Piper TTS ready (%s)", piper_path)
+                return piper_path
+            else:
+                logger.debug("Piper TTS: binary not found at %s", piper_path)
+        else:
+            logger.debug("Piper TTS: PIPER_MODEL not set, skipping")
+    except Exception as e:
+        logger.debug("Piper TTS init failed: %s", e)
 
     # 4. say (macOS built-in)
     if sys.platform == "darwin":
@@ -150,6 +161,60 @@ def engine_name() -> str:
     """Return the name of the active TTS engine."""
     _get_engine()
     return _engine_name
+
+
+def tts_available() -> bool:
+    """Alias for available()."""
+    return available()
+
+
+def tts_engine_name() -> str:
+    """Alias for engine_name()."""
+    return engine_name()
+
+
+def synthesize_to_file(text: str, output_path: str, *, rate: int = 180, volume: float = 1.0) -> bool:
+    """Synthesize speech to a WAV file without playing it.
+
+    Uses pyttsx3's save_to_file if available, otherwise falls back to Piper.
+    Returns True on success.
+    """
+    text = str(text or "").strip()
+    if not text:
+        return False
+
+    _get_engine()
+
+    if _engine_name == "pyttsx3" and _engine is not None:
+        try:
+            _engine.setProperty("rate", rate)
+            _engine.setProperty("volume", volume)
+            _engine.save_to_file(text, output_path)
+            _engine.runAndWait()
+            return True
+        except Exception as e:
+            logger.debug("pyttsx3 save_to_file failed: %s", e)
+
+    if _engine_name == "piper":
+        try:
+            piper_path = os.environ.get("PIPER_PATH", "piper")
+            model_path = os.environ.get("PIPER_MODEL", "")
+            if model_path:
+                cmd = [piper_path, "--model", model_path, "--output_file", output_path]
+                proc = subprocess.run(
+                    cmd, input=text.encode("utf-8"),
+                    capture_output=True, timeout=30,
+                )
+                return proc.returncode == 0
+        except Exception as e:
+            logger.debug("Piper synthesize failed: %s", e)
+
+    if _engine_name == "sapi5":
+        # SAPI5 doesn't support save-to-file directly; use Piper fallback if available
+        logger.debug("SAPI5: save_to_file not supported, use pyttsx3 or Piper")
+
+    logger.debug("TTS synthesize_to_file: no suitable engine available")
+    return False
 
 
 # ── Internal ─────────────────────────────────────────────────────────────────

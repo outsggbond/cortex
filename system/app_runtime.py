@@ -306,6 +306,15 @@ def _build_runtime_engine() -> RuntimeExecutionEngine:
     return engine
 
 
+def _run_api_server(args: Any) -> None:
+    from system.interfaces.api.http import run_http_api_server
+
+    host = str(getattr(args, "api_host", "127.0.0.1") or "127.0.0.1")
+    port = int(getattr(args, "api_port", 8000) or 8000)
+    logger.info("Starting HTTP API server on http://%s:%s", host, port)
+    run_http_api_server(args, host=host, port=port)
+
+
 def main() -> None:
     if sys.stderr is None:
         sys.stderr = sys.__stderr__
@@ -320,6 +329,11 @@ def main() -> None:
     _maybe_save_hardware_snapshot()
 
     try:
+        # API server mode — start HTTP server and block
+        if bool(getattr(args, "api_server", False)):
+            _run_api_server(args)
+            return
+
         if _run_artifact_actions(args):
             return
 
@@ -333,7 +347,9 @@ def main() -> None:
             return
 
         raise SystemExit(
-            "No supported runtime action selected. Use --chat, --computer-use-goal, --automation-scan/--automation-loop/--automation-run, --rag-ingest, --federated-train, or an artifact maintenance flag."
+            "No supported runtime action selected. Use --chat, --computer-use-goal, "
+            "--automation-scan/--automation-loop/--automation-run, --rag-ingest, "
+            "--federated-train, --api-server, or an artifact maintenance flag."
         )
     except SystemExit:
         raise

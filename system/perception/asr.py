@@ -194,3 +194,86 @@ def transcribe_file(path: str, language: str = "") -> Optional[str]:
     if audio is None:
         return None
     return transcribe(audio, language=language)
+
+
+def asr_available() -> bool:
+    """Check if any ASR backend (Whisper or Wav2Vec2) is available."""
+    model = _get_whisper("tiny")
+    if model is not None:
+        return True
+    # Check if Wav2Vec2 is importable as fallback
+    try:
+        import torch  # noqa: F401
+        from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def record_microphone(duration_s: float = 5.0, sample_rate: int = 16000) -> Optional[np.ndarray]:
+    """Record audio from the default microphone.
+
+    Tries PyAudio first, then sounddevice as fallback.
+    Returns float32 waveform normalized to [-1, 1], or None on failure.
+
+    Args:
+        duration_s: recording duration in seconds
+        sample_rate: target sample rate in Hz
+    """
+    duration_s = max(0.5, min(duration_s, 60.0))  # clamp to reasonable range
+    chunk_frames = int(sample_rate * duration_s)
+
+    # ── Backend 1: PyAudio ──
+    try:
+        import pyaudio
+        pa = pyaudio.PyAudio()
+        stream = pa.open(
+            format=pyaudio.paFloat32,
+            channels=1,
+            rate=sample_rate,
+            input=True,
+            frames_per_buffer=1024,
+        )
+        frames = []
+        for _ in range(0, chunk_frames, 1024):
+            data = stream.read(1024, exception_on_overflow=False)
+            frames.append(np.frombuffer(data, dtype="float32"))
+        stream.stop_stream()
+        stream.close()
+        pa.terminate()
+        audio = np.concatenate(frames)
+        return audio.astype("float32")
+    except ImportError:
+        logger.debug("PyAudio not installed — try: pip install pyaudio")
+    except Exception as e:
+        logger.debug("PyAudio recording failed: %s", e)
+
+    # ── Backend 2: sounddevice ──
+    try:
+        import sounddevice as sd
+        audio = sd.rec(
+            chunk_frames,
+            samplerate=sample_rate,
+            channels=1,
+            dtype="float32",
+        )
+        sd.wait()
+        return audio.flatten().astype("float32")
+    except ImportError:
+        logger.debug("sounddevice not installed — try: pip install sounddevice")
+    except Exception as e:
+        logger.debug("sounddevice recording failed: %s", e)
+
+    logger.warning("record_microphone: no audio backend available")
+    return None
+
+
+def transcribe_microphone(duration_s: float = 5.0, language: str = "") -> Optional[str]:
+    """Record from microphone and transcribe in one call.
+
+    Convenience wrapper combining record_microphone + transcribe.
+    """
+    audio = record_microphone(duration_s=duration_s)
+    if audio is None:
+        return None
+    return transcribe(audio, sample_rate=16000, language=language)

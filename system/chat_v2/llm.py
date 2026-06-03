@@ -7,17 +7,29 @@ OpenAI, and any provider exposing a /v1/chat/completions endpoint).
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
 import re
+import time
 import urllib.error
 import urllib.request
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, List, Mapping, Sequence
+from threading import Lock
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
+
+# ── Optional requests library (connection pooling, better retry support) ──────
+try:
+    import requests as _requests_lib
+    _HAS_REQUESTS = True
+except ImportError:
+    _HAS_REQUESTS = False
+    logger.debug("requests not installed; falling back to urllib. "
+                 "Install requests for connection pooling: pip install requests")
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +176,70 @@ def build_llm_client(
         timeout_s=timeout_s,
         system_prompt=system_prompt,
         temperature=temperature,
+        max_retries=3,
+        cache_ttl_s=300.0,
     )
+
+
+# ---------------------------------------------------------------------------
+# simple in-memory response cache (TTL-based, thread-safe)
+# ---------------------------------------------------------------------------
+
+class _LLMCache:
+    """Thread-safe LRU-ish cache for LLM responses with TTL."""
+
+    def __init__(self, max_entries: int = 256, ttl_s: float = 300.0) -> None:
+        self._store: Dict[str, Tuple[float, str]] = {}
+        self._lock = Lock()
+        self.max_entries = max(1, int(max_entries))
+        self.ttl_s = max(0.0, float(ttl_s))
+
+    def _key(self, model: str, payload: Mapping[str, Any]) -> str:
+        raw = json.dumps({"model": model, "messages": payload.get("messages", [])},
+                         sort_keys=True, ensure_ascii=False)
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def get(self, model: str, payload: Mapping[str, Any]) -> Optional[str]:
+        if self.ttl_s <= 0:
+            return None
+        key = self._key(model, payload)
+        with self._lock:
+            entry = self._store.get(key)
+            if entry is None:
+                return None
+            ts, text = entry
+            if time.time() - ts > self.ttl_s:
+                del self._store[key]
+                return None
+            return text
+
+    def set(self, model: str, payload: Mapping[str, Any], text: str) -> None:
+        if self.ttl_s <= 0 or not text:
+            return
+        key = self._key(model, payload)
+        with self._lock:
+            if len(self._store) >= self.max_entries:
+                # Evict oldest entry
+                oldest_key = min(self._store, key=lambda k: self._store[k][0])
+                del self._store[oldest_key]
+            self._store[key] = (time.time(), str(text))
+
+    def clear(self) -> None:
+        with self._lock:
+            self._store.clear()
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._store)
+
+
+# ── Shared cache instance (TTL=5min, up to 256 entries) ──────────────────────
+_llm_cache = _LLMCache(max_entries=256, ttl_s=300.0)
+
+
+def clear_llm_cache() -> None:
+    """Clear the shared LLM response cache."""
+    _llm_cache.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -211,6 +286,8 @@ class OpenAIChatClient(BaseLLMClient):
     """Talks to any OpenAI-compatible /v1/chat/completions endpoint.
 
     Supports DeepSeek, Kimi, local proxies, and OpenAI itself.
+    Features: retry with exponential backoff, response caching, rate-limit awareness,
+    and optional model fallback chain.
     """
 
     def __init__(
@@ -224,6 +301,12 @@ class OpenAIChatClient(BaseLLMClient):
         timeout_s: float = 30.0,
         system_prompt: str = "",
         temperature: float = 0.2,
+        # ── resilience knobs ──
+        max_retries: int = 3,
+        retry_base_s: float = 0.5,
+        retry_max_s: float = 15.0,
+        cache_ttl_s: float = 300.0,
+        fallback_models: Optional[List[str]] = None,
     ) -> None:
         # resolve endpoint
         env_endpoint = _env(
@@ -279,10 +362,35 @@ class OpenAIChatClient(BaseLLMClient):
         self.system_prompt = _clean(system_prompt)
         self.temperature = float(temperature)
 
+        # ── resilience state ──
+        self.max_retries = max(0, int(max_retries))
+        self.retry_base_s = max(0.1, float(retry_base_s))
+        self.retry_max_s = max(self.retry_base_s, float(retry_max_s))
+        self.cache_ttl_s = float(cache_ttl_s)
+        self.fallback_models: List[str] = [
+            m for m in (fallback_models or []) if _clean(m)
+        ]
+        self._rate_limit_until: float = 0.0
+
     # -- BaseLLMClient interface ------------------------------------------------
 
     def available(self) -> bool:
         return bool(self.api_key and self.model and self.endpoint)
+
+    def _build_messages(self, prompt: str, history: Sequence[Any]) -> List[dict[str, Any]]:
+        messages: List[dict[str, Any]] = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+        for turn in list(history or []):
+            role = str(getattr(turn, "role", "") or "").strip().lower()
+            text = str(getattr(turn, "text", "") or "").strip()
+            if role in ("user", "assistant", "system") and text:
+                messages.append({"role": role, "content": text})
+        messages.append({"role": "user", "content": _clean(prompt)})
+        return messages
+
+    def _build_payload(self, model: str, messages: List[dict[str, Any]]) -> Dict[str, Any]:
+        return {"model": model, "messages": messages, "temperature": self.temperature}
 
     def generate(self, prompt: str, history: Sequence[Any]) -> str:
         if not self.available():
@@ -291,53 +399,121 @@ class OpenAIChatClient(BaseLLMClient):
         if not prompt_text:
             return ""
 
-        messages: List[dict[str, Any]] = []
-        if self.system_prompt:
-            messages.append({"role": "system", "content": self.system_prompt})
+        messages = self._build_messages(prompt_text, history)
 
-        # fold in history
-        for turn in list(history or []):
-            role = str(getattr(turn, "role", "") or "").strip().lower()
-            text = str(getattr(turn, "text", "") or "").strip()
-            if role in ("user", "assistant", "system") and text:
-                messages.append({"role": role, "content": text})
+        # ── Try primary model with retry ──
+        models_to_try = [self.model] + self.fallback_models
+        for attempt_idx, model_name in enumerate(models_to_try):
+            payload = self._build_payload(model_name, messages)
 
-        messages.append({"role": "user", "content": prompt_text})
+            # Check cache
+            cached = _llm_cache.get(model_name, payload)
+            if cached is not None:
+                logger.debug("LLM cache hit for model=%s", model_name)
+                return cached
 
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": self.temperature,
+            body = self._request_with_retry(payload, model_name)
+            if body:
+                text = self._parse_response_text(body)
+                if text:
+                    _llm_cache.set(model_name, payload, text)
+                    return text
+
+            if attempt_idx < len(models_to_try) - 1:
+                logger.info("LLM falling back: %s -> %s", model_name,
+                            models_to_try[attempt_idx + 1])
+
+        logger.warning("LLM generate: all models exhausted, returning empty")
+        return ""
+
+    # -- request plumbing with retry --------------------------------------------
+
+    def _request_with_retry(self, payload: Mapping[str, Any],
+                            model_name: str = "") -> str:
+        """Send request with exponential backoff retry and rate-limit awareness."""
+        last_error = ""
+        for attempt in range(self.max_retries + 1):
+            # Respect rate-limit headers from previous responses
+            now = time.time()
+            if now < self._rate_limit_until:
+                wait = self._rate_limit_until - now
+                logger.debug("LLM rate-limited, waiting %.1fs", wait)
+                time.sleep(wait)
+
+            body, error, retry_after = self._request_once(payload)
+            if body:
+                return body
+
+            last_error = error
+
+            # If server told us to retry-after, respect it
+            if retry_after is not None and retry_after > 0:
+                self._rate_limit_until = time.time() + retry_after
+
+            if attempt >= self.max_retries:
+                break
+
+            # Exponential backoff with jitter
+            delay = min(self.retry_max_s,
+                        self.retry_base_s * (2 ** attempt))
+            jitter = delay * 0.25 * (hash(str(time.time())) % 1000 / 1000.0)
+            delay += jitter
+            logger.debug("LLM retry %d/%d in %.1fs: %s",
+                         attempt + 1, self.max_retries, delay,
+                         _truncate_err(Exception(last_error)) if last_error else "unknown")
+            time.sleep(delay)
+
+        logger.warning("LLM request failed after %d attempts: %s",
+                       self.max_retries + 1, last_error or "unknown")
+        return ""
+
+    def _request_once(self, payload: Mapping[str, Any]) -> Tuple[str, str, Optional[float]]:
+        """Make one HTTP request. Returns (body, error, retry_after_seconds)."""
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
+            "X-Client-Request-Id": str(uuid.uuid4()),
         }
 
-        body = self._request(payload)
-        return self._parse_response_text(body)
+        # ── Try requests (connection pooling) first ──
+        if _HAS_REQUESTS:
+            try:
+                resp = _requests_lib.post(
+                    self.endpoint,
+                    json=dict(payload),
+                    headers=headers,
+                    timeout=self.timeout_s,
+                )
+                if resp.status_code == 429:
+                    retry_after = float(resp.headers.get("Retry-After",
+                                     resp.headers.get("x-ratelimit-reset-after", "5")))
+                    return "", f"rate_limited_429", retry_after
+                if resp.status_code >= 500:
+                    return "", f"server_error_{resp.status_code}", None
+                if resp.status_code >= 400:
+                    return "", f"client_error_{resp.status_code}: {_truncate_err(Exception(resp.text))}", None
+                return resp.text, "", None
+            except Exception as e:
+                return "", f"requests_error: {_truncate_err(e)}", None
 
-    # -- request plumbing -------------------------------------------------------
-
-    def _request(self, payload: Mapping[str, Any]) -> str:
-        req = urllib.request.Request(
-            self.endpoint,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}",
-                "X-Client-Request-Id": str(uuid.uuid4()),
-            },
-            method="POST",
-        )
+        # ── Fallback: urllib ──
         try:
+            req = urllib.request.Request(
+                self.endpoint,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST",
+            )
             with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
-                return resp.read().decode("utf-8", errors="ignore")
+                return resp.read().decode("utf-8", errors="ignore"), "", None
         except urllib.error.HTTPError as e:
-            logger.warning("LLM HTTP %s: %s", e.code, _truncate_err(e))
-            return ""
+            if e.code == 429:
+                return "", "rate_limited_429", 5.0
+            return "", f"HTTP_{e.code}: {_truncate_err(e)}", None
         except urllib.error.URLError as e:
-            logger.warning("LLM connection failed: %s", e.reason)
-            return ""
+            return "", f"connection: {e.reason}", None
         except Exception as e:
-            logger.warning("LLM request failed: %s", e)
-            return ""
+            return "", f"urllib_error: {_truncate_err(e)}", None
 
     @staticmethod
     def _parse_response_text(body: str) -> str:
@@ -394,6 +570,8 @@ def _deep_find_assistant_content(data: Any, max_depth: int = 6) -> str:
 __all__ = [
     "BaseLLMClient",
     "OpenAIChatClient",
+    "NoopLLMClient",
     "resolve_openai_compat_config",
     "build_llm_client",
+    "clear_llm_cache",
 ]

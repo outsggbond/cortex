@@ -24,6 +24,7 @@ class Node:
         node_id: str = "",
         node_type: str = "",
         feature: Any = None,
+        timestamp: Optional[float] = None,
     ):
         # Accept both 'id' and 'node_id' (perception system uses node_id)
         self.id = id or node_id or str(uuid.uuid4())
@@ -32,6 +33,8 @@ class Node:
                          np.asarray(feature, dtype=np.float32) if feature is not None else
                          np.array([], dtype=np.float32))
         self.metadata = dict(metadata or {})
+        import time
+        self.timestamp = timestamp if timestamp is not None else time.time()
 
     @property
     def feature(self):
@@ -66,12 +69,15 @@ class Edge:
         relation: str = "",
         weight: float = 0.0,
         metadata: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[float] = None,
     ):
         self.source = source
         self.target = target
         self.relation = relation
         self.weight = float(weight)
         self.metadata = dict(metadata or {})
+        import time
+        self.timestamp = timestamp if timestamp is not None else time.time()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -105,12 +111,14 @@ class PerceptionGraph:
     # -- nodes ----------------------------------------------------------------
 
     @property
-    def nodes(self) -> List[Node]:
-        return list(self._nodes.values())
+    def nodes(self) -> Dict[str, Node]:
+        """Dict of node_id → Node. Supports .get(), .items(), .values(), 'in'."""
+        return self._nodes
 
     @property
     def edges(self) -> List[Edge]:
-        return list(self._edges)
+        """List of all edges. Iterate directly or use find_edges_by_node()."""
+        return self._edges
 
     def add_node(self, node: Node) -> None:
         self._nodes[node.id] = node
@@ -157,6 +165,67 @@ class PerceptionGraph:
         else:
             ids = self.neighbors(nid, "out") + self.neighbors(nid, "in")
         return ids
+
+    # -- graph queries ---------------------------------------------------------
+
+    def has_direct_edge(self, from_id: str, to_id: str, relation: str = "") -> bool:
+        """Check if a direct edge exists between two nodes, optionally matching relation."""
+        for idx in self._adj_out.get(from_id, []):
+            if idx < len(self._edges):
+                e = self._edges[idx]
+                if e.target == to_id:
+                    if not relation or e.relation == relation:
+                        return True
+        return False
+
+    def find_edges_by_node(self, node_id: str) -> List[Edge]:
+        """Return all edges where node_id is source or target."""
+        seen: set[int] = set()
+        result: List[Edge] = []
+        for idx in self._adj_out.get(node_id, []) + self._adj_in.get(node_id, []):
+            if idx not in seen and idx < len(self._edges):
+                seen.add(idx)
+                result.append(self._edges[idx])
+        return result
+
+    def find_paths(self, start_id: str, end_id: str, max_hops: int = 3,
+                   max_paths: int = 20) -> List[List[str]]:
+        """BFS-based multi-path search between two nodes up to max_hops.
+
+        Returns up to max_paths shortest paths (each is list of node IDs including start and end).
+        """
+        if start_id == end_id:
+            return [[start_id]]
+        if max_hops < 1:
+            return []
+
+        from collections import deque
+        paths: List[List[str]] = []
+        # BFS: each entry is (current_node_id, path_so_far)
+        queue: deque = deque()
+        queue.append((start_id, [start_id]))
+        visited_at_depth: Dict[str, int] = {start_id: 0}
+
+        while queue and len(paths) < max_paths:
+            current, path = queue.popleft()
+            if len(path) - 1 >= max_hops:
+                continue
+            for neighbor in self.neighbors(current, direction="all"):
+                new_depth = len(path)
+                # Allow revisiting only if we found a shorter/shorter-depth path
+                prev_depth = visited_at_depth.get(neighbor)
+                if prev_depth is not None and prev_depth <= new_depth:
+                    continue
+                visited_at_depth[neighbor] = new_depth
+                new_path = path + [neighbor]
+                if neighbor == end_id:
+                    paths.append(new_path)
+                else:
+                    queue.append((neighbor, new_path))
+
+        # Sort by length (shortest first)
+        paths.sort(key=len)
+        return paths[:max_paths]
 
     # -- adjacency ------------------------------------------------------------
 

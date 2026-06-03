@@ -457,8 +457,8 @@ class OptimizedPerceptionSystem:
                 for nid, n in self.graph.nodes.items()
             ],
             "edges": [
-                (e.from_node, e.to_node, e.relation, e.weight, e.metadata, e.timestamp)
-                for e in self.graph.edges.values()
+                (e.source, e.target, e.relation, e.weight, e.metadata, e.timestamp)
+                for e in self.graph.edges
             ],
             "cycle_count": self.cycle_count,
             "performance_stats": self.performance_stats,
@@ -488,5 +488,6 @@ class OptimizedPerceptionSystem:
             self.cycle_count = data.get("cycle_count", 0)
             self.performance_stats = data.get("performance_stats", {"cycle_time": []})
         if index_file.exists():
-            self.index = VectorIndex.load(str(index_file))
+            self.index = VectorIndex(self.config.feature_dim)
+            self.index.load(str(index_file))
         logger.info(f"Checkpoint loaded: {cp}")

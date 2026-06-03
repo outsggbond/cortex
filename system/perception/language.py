@@ -28,7 +28,7 @@ def detect_language(text: str) -> str:
         if hiragana + katakana > cjk * 0.3:
             return "ja"
         return "zh"
-    if hiragana + katakana / total > 0.1:
+    if (hiragana + katakana) / total > 0.1:
         return "ja"
     if hangul / total > 0.15:
         return "ko"

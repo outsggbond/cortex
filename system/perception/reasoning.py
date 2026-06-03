@@ -33,7 +33,7 @@ class AdaptiveReasoningModule:
                 if nid in graph.nodes:
                     node_ids_to_check.add(nid)
             for edge in graph.find_edges_by_node(node.id):
-                other_id = edge.to_node if edge.from_node == node.id else edge.from_node
+                other_id = edge.target if edge.source == node.id else edge.source
                 node_ids_to_check.add(other_id)
 
         nodes_list = [graph.nodes[nid] for nid in node_ids_to_check if nid in graph.nodes]
@@ -66,8 +66,8 @@ class AdaptiveReasoningModule:
         candidate_ids = {nid for nid, _ in neighbors}
         # also include direct neighbors in graph
         for e in self.graph.find_edges_by_node(start_node.id):
-            candidate_ids.add(e.from_node)
-            candidate_ids.add(e.to_node)
+            candidate_ids.add(e.source)
+            candidate_ids.add(e.target)
 
         # limit candidate ids to avoid explosion (preserve order from memory neighbors)
         candidate_list = list(candidate_ids)
