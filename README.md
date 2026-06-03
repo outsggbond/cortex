@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Offline Multimodal System
 
 一个以本地运行和多能力编排为目标的 Python 项目，当前主入口已经收敛到 `main.py`，核心运行时位于 `system/`。
@@ -108,3 +109,7 @@ V2_LLM_MODEL=deepseek-v4-flash
 ## 版本说明
 
 根据 DeepSeek 官方文档，`deepseek-v4-flash` / `deepseek-v4-pro` 是当前推荐模型；`deepseek-chat` 和 `deepseek-reasoner` 标记为将在 `2026-07-24` 退役。因此仓库默认 DeepSeek 预设已经切到 `deepseek-v4-flash`。
+=======
+# niubiclaw
+没有完成的全能ai
+>>>>>>> 1817aafc54ef74eb8884fc574d2d644f2981a82e
