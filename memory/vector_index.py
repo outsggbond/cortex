@@ -7,7 +7,13 @@ from typing import Any, Dict, List, Sequence, Tuple
 
 
 def _to_vector(values: Sequence[Any], dim: int) -> List[float]:
-    vector = [float(x) for x in list(values or [])[:dim]]
+    if values is None:
+        values = []
+    elif hasattr(values, 'tolist'):
+        values = values.tolist()
+    elif not isinstance(values, (list, tuple)):
+        values = list(values)
+    vector = [float(x) for x in list(values)[:dim]]
     if len(vector) < dim:
         vector.extend([0.0] * (dim - len(vector)))
     return vector

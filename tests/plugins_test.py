@@ -110,9 +110,9 @@ class TestPluginRegistry:
 class TestBuiltInPlugins:
     """Tests for the global registry and its 16 built-in plugins."""
 
-    def test_all_16_plugins_registered(self):
+    def test_all_20_plugins_registered(self):
         plugins = registry.list_plugins()
-        assert len(plugins) == 16, f"Expected 16 plugins, got {len(plugins)}: {plugins}"
+        assert len(plugins) == 20, f"Expected 20 plugins, got {len(plugins)}: {plugins}"
 
     def test_expected_plugin_names(self):
         plugins = registry.list_plugins()
@@ -133,6 +133,10 @@ class TestBuiltInPlugins:
             "desktop_type_text",
             "desktop_hotkey",
             "desktop_launch",
+            "browser_dom_open",
+            "browser_dom_click",
+            "browser_dom_type",
+            "browser_dom_screenshot",
         ]
         for name in expected:
             assert name in plugins, f"Missing plugin: {name}"

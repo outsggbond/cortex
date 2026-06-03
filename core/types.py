@@ -21,11 +21,22 @@ class Node:
         type: str = "",
         features: Optional[np.ndarray] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        node_id: str = "",
+        node_type: str = "",
+        feature: Any = None,
     ):
-        self.id = id or str(uuid.uuid4())
-        self.type = type
-        self.features = features if features is not None else np.array([], dtype=np.float32)
+        # Accept both 'id' and 'node_id' (perception system uses node_id)
+        self.id = id or node_id or str(uuid.uuid4())
+        self.type = type or node_type
+        self.features = (features if features is not None else
+                         np.asarray(feature, dtype=np.float32) if feature is not None else
+                         np.array([], dtype=np.float32))
         self.metadata = dict(metadata or {})
+
+    @property
+    def feature(self):
+        """Alias for backward compat with perception system."""
+        return self.features
 
     def to_dict(self) -> Dict[str, Any]:
         return {
