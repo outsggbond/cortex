@@ -20,7 +20,9 @@ class ChatRequest:
     user_text: str
     history: List[ChatTurn] = field(default_factory=list)
     image_path: str = ""
-    image_data: Any = None  # numpy array (H, W, C), set programmatically
+    image_data: Any = None   # numpy array (H, W, C), set programmatically
+    audio_path: str = ""
+    audio_data: Any = None   # numpy array (samples,), set programmatically
 
 
 @dataclass

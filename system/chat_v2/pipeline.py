@@ -195,6 +195,24 @@ class ChatPipeline:
             return f"[Image: {caption}]"
         except Exception:
             return ""
+
+    def _transcribe_audio(self, req: ChatRequest) -> str:
+        """Transcribe audio input if attached, returning text or empty string."""
+        audio = req.audio_data
+        if audio is None and req.audio_path:
+            try:
+                from system.perception.asr import load_audio
+                audio = load_audio(req.audio_path)
+            except Exception:
+                pass
+        if audio is None or audio.size == 0:
+            return ""
+        try:
+            from system.perception.asr import transcribe
+            text = transcribe(audio)
+            return str(text or "").strip()
+        except Exception:
+            return ""
     def _route_guidance(self, route): return self.retrieval.route_guidance(route)
     def _rag_reply(self, q, ctx): return self.retrieval.rag_reply(q, ctx)
     def _has_rag_evidence(self, ctx): return self.retrieval.has_rag_evidence(ctx)
@@ -575,8 +593,23 @@ class ChatPipeline:
         import time as _time
         _start_ts = _time.time()
 
+        # ── Audio → text transcription ──────────────────────────────────────
+        if not req.user_text.strip() and (req.audio_data is not None or req.audio_path):
+            transcribed = self._transcribe_audio(req)
+            if transcribed:
+                req = ChatRequest(
+                    user_text=transcribed,
+                    history=req.history,
+                    image_path=req.image_path, image_data=req.image_data,
+                    audio_path=req.audio_path, audio_data=req.audio_data,
+                )
+
         effective_text, thread_context = self._expand_followup_query(req)
-        work_req = ChatRequest(user_text=effective_text, history=req.history)
+        work_req = ChatRequest(
+            user_text=effective_text, history=req.history,
+            image_path=req.image_path, image_data=req.image_data,
+            audio_path=req.audio_path, audio_data=req.audio_data,
+        )
         intent = classify_intent(work_req.user_text)
         text, source, metadata = self._decide(work_req, intent, thread_context=thread_context)
         text = normalize_persona_reply(req.user_text, text)
