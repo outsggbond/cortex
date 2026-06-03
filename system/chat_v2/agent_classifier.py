@@ -115,7 +115,8 @@ class RequestClassifier:
             "click control ", "list windows", "list controls", "focus window",
             "launch ", "hotkey ", "type ", "screenshot", "window", "control",
             "browser", "app ", "窗口", "聚焦", "启动",
-            "截图", "输入",
+            "截图", "输入", "press ", "key ", "scroll", "wait ",
+            "open ", "close window", "minimize", "maximize",
         ))
 
     def is_exec_request(self, text: str) -> bool:

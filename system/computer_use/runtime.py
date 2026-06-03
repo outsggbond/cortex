@@ -629,6 +629,9 @@ class ComputerUseRuntime:
         elif action.type == "launch":
             if not action.target:
                 raise ValueError("launch requires target")
+        elif action.type == "scroll":
+            if not action.seconds and not action.text:
+                action.seconds = 3  # default scroll amount
         elif action.type == "wait":
             pass
         elif action.type in {"handoff", "request_human"}:

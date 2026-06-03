@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import Any, Dict
 
 from system.computer_use._runtime_grid import _clean_str, _find_grid_cell
@@ -93,6 +94,21 @@ def _execute_action(runtime, action, observation):
         return runtime._run_plugin("desktop_hotkey", {"hotkey": action.keys}, required=False)
     if action.type == "launch":
         return runtime._run_plugin("desktop_launch", {"target": action.target}, required=False)
+    if action.type == "scroll":
+        # Scroll at screen center or specified coordinates
+        x = int(getattr(action, 'x', 0) or 0)
+        y = int(getattr(action, 'y', 0) or 0)
+        if not x and not y:
+            # Default: scroll at screen center
+            from system.computer_use._runtime_grid import _image_size
+            screen_path = observation.get("screen_path", "")
+            try:
+                w, h = _image_size(Path(screen_path)) if screen_path else (1920, 1080)
+            except Exception:
+                w, h = 1920, 1080
+            x, y = w // 2, h // 2
+        amount = int(float(getattr(action, 'seconds', 0) or 3) * -40)  # negative = scroll down
+        return runtime._run_plugin("desktop_scroll", {"x": x, "y": y, "delta": amount}, required=False)
     if action.type == "wait":
         time.sleep(max(0.1, float(action.seconds)))
         return {
