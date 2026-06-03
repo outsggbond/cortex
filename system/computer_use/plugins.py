@@ -666,7 +666,24 @@ def _launch_app(target: str, args: Optional[List[str]] = None) -> Dict[str, Any]
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 10. Plugin registry
+# 10. Browser automation plugins (Playwright-based, optional)
+# ═══════════════════════════════════════════════════════════════════
+
+def _plugin_browser_dom_open(payload: dict) -> dict:
+    return {"ok": False, "error": "Playwright not installed — browser plugins require 'pip install playwright'"}
+
+def _plugin_browser_dom_click(payload: dict) -> dict:
+    return {"ok": False, "error": "Playwright not installed"}
+
+def _plugin_browser_dom_type(payload: dict) -> dict:
+    return {"ok": False, "error": "Playwright not installed"}
+
+def _plugin_browser_dom_screenshot(payload: dict) -> dict:
+    return {"ok": False, "error": "Playwright not installed"}
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 11. Plugin registry
 # ═══════════════════════════════════════════════════════════════════
 
 class PluginRegistry:
@@ -885,3 +902,7 @@ registry.register("desktop_scroll",         _plugin_desktop_scroll)
 registry.register("desktop_type_text",      _plugin_desktop_type_text)
 registry.register("desktop_hotkey",         _plugin_desktop_hotkey)
 registry.register("desktop_launch",         _plugin_desktop_launch)
+registry.register("browser_dom_open",       _plugin_browser_dom_open)
+registry.register("browser_dom_click",      _plugin_browser_dom_click)
+registry.register("browser_dom_type",       _plugin_browser_dom_type)
+registry.register("browser_dom_screenshot", _plugin_browser_dom_screenshot)

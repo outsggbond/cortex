@@ -28,6 +28,14 @@ def _clean(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _truncate_err(exc: Exception, max_len: int = 200) -> str:
+    """Truncate exception message for logging."""
+    text = str(exc)
+    if len(text) > max_len:
+        text = text[:max_len - 3] + "..."
+    return text
+
+
 def _first(*values: Any) -> str:
     for v in values:
         text = _clean(v)
@@ -245,13 +253,25 @@ class OpenAIChatClient(BaseLLMClient):
         env_model = _env(os.environ, "V2_LLM_MODEL", "CLOUD_LLM_MODEL")
         self.model = _first(model, env_model, "gpt-4.1-mini")
 
-        # api key
+        # Auto-detect endpoint from model name if using OpenAI default
+        _model_lower = self.model.lower()
+        if "deepseek" in _model_lower and "api.openai.com" in self.endpoint:
+            self.endpoint = "https://api.deepseek.com/v1/chat/completions"
+        elif "kimi" in _model_lower or "moonshot" in _model_lower and "api.openai.com" in self.endpoint:
+            self.endpoint = "https://api.moonshot.cn/v1/chat/completions"
+
+        # api key — auto-detect provider-specific env vars
+        _provider_keys = []
+        if "deepseek" in self.model.lower():
+            _provider_keys.extend([os.environ.get("DEEPSEEK_API_KEY", "")])
+        if "kimi" in self.model.lower() or "moonshot" in self.model.lower():
+            _provider_keys.extend([os.environ.get("KIMI_API_KEY", ""), os.environ.get("MOONSHOT_API_KEY", "")])
         env_key = _first(
             os.environ.get(api_key_env, ""),
             os.environ.get("V2_LLM_API_KEY", ""),
             os.environ.get("CLOUD_LLM_API_KEY", ""),
             os.environ.get("OPENAI_API_KEY", ""),
-            os.environ.get("DEEPSEEK_API_KEY", ""),
+            *_provider_keys,
         )
         self.api_key = _first(api_key, env_key)
 
@@ -306,8 +326,18 @@ class OpenAIChatClient(BaseLLMClient):
             },
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
-            return resp.read().decode("utf-8", errors="ignore")
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
+                return resp.read().decode("utf-8", errors="ignore")
+        except urllib.error.HTTPError as e:
+            logger.warning("LLM HTTP %s: %s", e.code, _truncate_err(e))
+            return ""
+        except urllib.error.URLError as e:
+            logger.warning("LLM connection failed: %s", e.reason)
+            return ""
+        except Exception as e:
+            logger.warning("LLM request failed: %s", e)
+            return ""
 
     @staticmethod
     def _parse_response_text(body: str) -> str:

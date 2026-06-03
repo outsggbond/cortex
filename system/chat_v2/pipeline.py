@@ -474,8 +474,12 @@ class ChatPipeline:
                     )
 
         if self.config.enable_llm and self.llm_client.available():
-            llm_query = self._augment_query_with_context(req.user_text, memory_hits, rag_context, route)
-            llm_text = self.llm_client.generate(llm_query, req.history)
+            try:
+                llm_query = self._augment_query_with_context(req.user_text, memory_hits, rag_context, route)
+                llm_text = self.llm_client.generate(llm_query, req.history)
+            except Exception:
+                logger.debug("LLM call failed, falling through to next source", exc_info=True)
+                llm_text = ""
             if self._valid_reply(req.user_text, llm_text):
                 metadata = self._attach_thread_context({}, thread_context, resolved_query=req.user_text)
                 if memory_hits and rag_context:
@@ -494,6 +498,21 @@ class ChatPipeline:
                     rag_context=rag_context,
                     thread_context=thread_context,
                 )
+
+        # FAQ retrieval — embedding-based question matching
+        if self.faq_retriever is not None:
+            try:
+                faq_result = self.faq_retriever.search(req.user_text)
+                if faq_result is not None:
+                    faq_text = str(getattr(faq_result, "answer", "") or "").strip()
+                    if self._valid_reply(req.user_text, faq_text):
+                        metadata = self._attach_thread_context(
+                            {"faq_question": getattr(faq_result, "question", ""), "faq_source": getattr(faq_result, "source", "")},
+                            thread_context, resolved_query=req.user_text,
+                        )
+                        return faq_text, "faq", metadata
+            except Exception:
+                logger.debug("FAQ retrieval failed", exc_info=True)
 
         if route.kind == RouteKind.PROJECT_QA:
             rag_text = self._rag_reply(req.user_text, rag_context)
