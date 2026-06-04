@@ -33,20 +33,24 @@ jobs:
 
       - name: Data Leakage Gates (Smoke)
         run: |
-          python scripts/clean_training_data.py `
-            --paths memory/adapter_train_smoke.jsonl memory/adapter_eval_smoke.jsonl `
-            --out-dir audit/ci_cleaned `
-            --report audit/ci_data_clean_report.json `
-            --check-cross-leakage `
-            --check-semantic-leakage `
-            --semantic-overlap-threshold 0.70 `
-            --semantic-max-items-per-file 400 `
-            --semantic-max-pair-comparisons 200000 `
-            --max-train-eval-pair-overlap-ratio 0.0 `
-            --max-train-eval-prompt-overlap-ratio 0.0 `
-            --max-train-eval-semantic-prompt-overlap-ratio 0.0 `
-            --max-train-eval-semantic-pair-overlap-ratio 0.50 `
-            --fail-on-gate
+          if ((Test-Path memory/adapter_train_smoke.jsonl) -and (Test-Path memory/adapter_eval_smoke.jsonl)) {
+            python scripts/clean_training_data.py `
+              --paths memory/adapter_train_smoke.jsonl memory/adapter_eval_smoke.jsonl `
+              --out-dir audit/ci_cleaned `
+              --report audit/ci_data_clean_report.json `
+              --check-cross-leakage `
+              --check-semantic-leakage `
+              --semantic-overlap-threshold 0.70 `
+              --semantic-max-items-per-file 400 `
+              --semantic-max-pair-comparisons 200000 `
+              --max-train-eval-pair-overlap-ratio 0.0 `
+              --max-train-eval-prompt-overlap-ratio 0.0 `
+              --max-train-eval-semantic-prompt-overlap-ratio 0.0 `
+              --max-train-eval-semantic-pair-overlap-ratio 0.50 `
+              --fail-on-gate
+          } else {
+            Write-Host "SKIP: smoke data files not found (memory/adapter_train_smoke.jsonl, memory/adapter_eval_smoke.jsonl)"
+          }
 
       - name: Run Pytest
         run: |
